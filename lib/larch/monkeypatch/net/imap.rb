@@ -8,7 +8,38 @@ if RUBY_VERSION <= '1.9.1'
     class IMAP # :nodoc:
       class ResponseParser # :nodoc:
         private
-
+        
+        def status_response
+          token = match(T_ATOM)
+          name = token.value.upcase
+          match(T_SPACE)
+          mailbox = astring
+          match(T_SPACE)
+          match(T_LPAR)
+          attr = {}
+          while true
+            token = lookahead
+            case token.symbol
+            when T_RPAR
+              shift_token
+              break
+            when T_SPACE
+              shift_token
+            end
+            token = match(T_ATOM)
+            key = token.value.upcase
+            match(T_SPACE)
+            val = number
+            attr[key] = val
+          end
+          token = lookahead
+          if token.symbol == T_SPACE
+            shift_token
+          end
+          data = StatusData.new(mailbox, attr)
+          return UntaggedResponse.new(name, data, @str)
+        end
+        
         # This monkeypatched method is the one included in Ruby 1.9 SVN trunk as
         # of 2010-02-08.
         def resp_text_code
